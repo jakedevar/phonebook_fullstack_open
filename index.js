@@ -1,36 +1,14 @@
+require('dotenv').config()
+const People = require('./models/people')
 const express = require('express')
 const morgan = require('morgan')
 const app = express()
+
 app.use(express.static('build'))
-
-let people = [
-    { 
-      "id": 1,
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": 2,
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": 3,
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": 4,
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
-
 app.use(morgan('tiny'))
 
 app.get("/api/persons", (req, res) => {
-	console.log(people)
-	res.json(people)
+	People.find({}).then(people => res.json(people))
 })
 
 app.get("/info", (req, res) => {
@@ -42,7 +20,7 @@ app.get("/info", (req, res) => {
 
 app.get("/api/persons/:id", (req, res) => {
 	const id = Number(req.params.id)
-	const person = people.find(people => people.id === id)
+	const person = People.findById(id).then(note => note)
 	if (person) {
 		res.json(person)
 	} else {
@@ -52,19 +30,18 @@ app.get("/api/persons/:id", (req, res) => {
 
 app.delete("/api/persons/:id", (req, res) => {
 	const id = Number(req.params.id)
-	const personsFiltered = people.filter(person => person.id !== id)
+	const personsFiltered = People.findById(id).then(note => note)
 	if (personsFiltered) {
-		people = personsFiltered
 		res.status(200).end()
 	} else {
 		res.status(404).end()
 	}
 })
 
-const generateId = () => {
-	const number = Math.floor(Math.random() * (100 - people.length))
-	return number
-}
+// const generateId = () => {
+// 	const number = Math.floor(Math.random() * (100 - people.length))
+// 	return number
+// }
 
 app.use(express.json())
 
@@ -84,25 +61,20 @@ morgan.token('body', function (req, res) {
 app.post("/api/persons", (req, res) => {
 	const body = req.body
 
-	if (people.find(person => person.name === body.name)) {
-		return res.status(400).json({
-			error: "name must be unique"
-		})
-	}
-
 	if (!body.name) {
 		return res.status(404).json({
 			error: 'content missing'
 		})
-	} 
+	}
 
-	const person = {
+	const person = new People({
 		name: body.name,
 		number: body.number,
-		id: generateId()
-	}
-	people.push(person)
-	res.json(people)
+	})
+
+	person.save().then(savedPerson => {
+		res.json(savedPerson)
+	})
 })
 
 const unknownEndpoint = (req, res) => {
@@ -111,7 +83,7 @@ const unknownEndpoint = (req, res) => {
 
 app.use(unknownEndpoint)
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 
 app.listen(PORT, () => {
 	console.log(`Server running on port ${PORT}`)
