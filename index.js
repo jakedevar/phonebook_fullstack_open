@@ -29,6 +29,7 @@ let people = [
 app.use(morgan('tiny'))
 
 app.get("/api/persons", (req, res) => {
+	console.log(people)
 	res.json(people)
 })
 
@@ -53,8 +54,8 @@ app.delete("/api/persons/:id", (req, res) => {
 	const id = Number(req.params.id)
 	const personsFiltered = people.filter(person => person.id !== id)
 	if (personsFiltered) {
-		persons = personsFiltered
-		res.json(persons)
+		people = personsFiltered
+		res.status(200).end()
 	} else {
 		res.status(404).end()
 	}
@@ -70,24 +71,24 @@ app.use(express.json())
 morgan.token('body', function (req, res) { 
 	return JSON.stringify(req.body )
 })
-app.use(morgan((tokens, req, res) => {
-	return [
-		tokens.method(req, res),
-		tokens.url(req, res),
-		tokens.status(req, res),
-	  '-',
-		tokens.body(req, res)
-	]
-}))
+//app.use(morgan((tokens, req, res) => {
+//	return [
+//		tokens.method(req, res),
+//		tokens.url(req, res),
+//		tokens.status(req, res),
+//	  '-',
+//		tokens.body(req, res)
+//	]
+//}))
 
 app.post("/api/persons", (req, res) => {
 	const body = req.body
 
-	//if (people.find(person => person.name === body.name)) {
-	//	return res.status(400).json({
-	//		error: "name must be unique"
-	//	})
-	//}
+	if (people.find(person => person.name === body.name)) {
+		return res.status(400).json({
+			error: "name must be unique"
+		})
+	}
 
 	if (!body.name) {
 		return res.status(404).json({
