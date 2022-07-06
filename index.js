@@ -6,36 +6,63 @@ const app = express()
 
 app.use(express.static('build'))
 app.use(morgan('tiny'))
+app.use(express.json())
+
+const errorHandler = (error, req, rew, next) => {
+	console.log(error.message)
+
+	if (error.name === 'CastError') {
+		return res.status(400).send({error: "malformated id"})
+	}
+
+	next(error)
+}
+
+app.use(errorHandler)
 
 app.get("/api/persons", (req, res) => {
 	People.find({}).then(people => res.json(people))
 })
 
-app.get("/info", (req, res) => {
+app.get("/info", async (req, res, next) => {
+	const people = await People.find({}).then(people => people).catch(err => next(err))
 	res.send(
 	`<p>Phone book has info for ${people.length} ${people.length > 1 ? "persons" : "person"}</p>
 	${new Date()}
 		`)
 })
 
-app.get("/api/persons/:id", (req, res) => {
-	const id = Number(req.params.id)
-	const person = People.findById(id).then(note => note)
-	if (person) {
+app.get("/api/persons/:id", (req, res, next) => {
+	const id = req.params.id
+	People.findById(id).then(person => {
 		res.json(person)
-	} else {
-		res.status(404).end()
-	}
+	}).catch(err => next(err))
 })
 
-app.delete("/api/persons/:id", (req, res) => {
-	const id = Number(req.params.id)
-	const personsFiltered = People.findById(id).then(note => note)
-	if (personsFiltered) {
-		res.status(200).end()
-	} else {
-		res.status(404).end()
+app.delete("/api/persons/:id", (req, res, next) => {
+	const id = req.params.id
+	console.log(id)
+	People.findByIdAndRemove(id)
+		.then(_ => {
+			return res.status(204).end()
+		}).catch(err => 
+			next(err)
+		)
+})
+
+app.put("/api/persons/:id", (req, res, next) => {
+	const body = req.body
+	const id = req.params.id
+
+	const person = {
+		name: body.name,
+		number: body.number
 	}
+
+	People.findByIdAndUpdate(id, person, {new: true})
+		.then(updatedPerson => {
+			res.json(updatedPerson)
+		}).catch(err => next(err))
 })
 
 // const generateId = () => {
